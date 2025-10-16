@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "386579035173",
+    "project_id": "dinetime-3be27",
+    "storage_bucket": "dinetime-3be27.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:386579035173:android:08c1a0b4f024b5142a3bcc",
+        "android_client_info": {
+          "package_name": "com.project.dinetime"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcnnPbrery4sZ5uzD0uXi4B7zkzMY1zUo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
