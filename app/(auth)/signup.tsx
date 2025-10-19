@@ -15,6 +15,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
 import { theme } from "../../constants/theme";
+import { getAuth, sendEmailVerification } from "firebase/auth";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -26,6 +27,9 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+    const [isEmailSent, setIsEmailSent] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
 
   const validateForm = () => {
     if (!email || !password || !confirmPassword) {
@@ -46,20 +50,54 @@ export default function SignupScreen() {
     return true;
   };
 
-  const handleSignup = async () => {
-    if (!validateForm()) return;
+const handleSignup = async () => {
+  if (!validateForm()) return;
+  setLoading(true);
 
-    setLoading(true);
-    try {
-      await signUp(email, password);
-      // After signup, user needs to complete onboarding
-      router.replace("/(onboarding)/tell-us-about-you");
-    } catch (error: any) {
-      Alert.alert("Signup Failed", error.message);
-    } finally {
-      setLoading(false);
+  try {
+    await signUp(email, password);
+    const auth = getAuth();
+
+    let attempts = 0;
+    while (!auth.currentUser && attempts < 5) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      attempts++;
     }
-  };
+
+    if (!auth.currentUser) {
+      throw new Error("Failed to initialize user. Please try again.");
+    }
+
+    await sendEmailVerification(auth.currentUser);
+
+    Alert.alert(
+      "Verification Email Sent",
+      "Check your inbox for a verification link. Please verify your email before continuing."
+    );
+
+    // Navigate after short delay
+    setTimeout(() => {
+      router.replace("/(onboarding)/tell-us-about-you");
+    }, 800);
+  } catch (error: any) {
+    if (error.code === "auth/too-many-requests") {
+      // ✅ Ignore, since email is already sent
+      Alert.alert(
+        "Email Sent",
+        "Verification link has been sent to your email. Please verify it before continuing."
+      );
+      setTimeout(() => {
+        router.replace("/(onboarding)/tell-us-about-you");
+      }, 800);
+    } else {
+      Alert.alert("Signup Failed", error.message);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <KeyboardAvoidingView
@@ -228,7 +266,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputContainer: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   label: {
     fontSize: theme.fontSize.sm,
@@ -256,7 +294,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
     textAlign: "center",
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     lineHeight: 20,
   },
   termsLink: {

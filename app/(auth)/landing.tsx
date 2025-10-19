@@ -59,16 +59,6 @@ export default function LandingScreen() {
               >
                 <Text style={styles.primaryButtonText}>Get Started</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => router.push("/(auth)/login")}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  Already have an account? Sign In
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -118,7 +108,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   features: {
-    marginBottom: theme.spacing.xxl,
+    marginBottom: theme.spacing.lg,
   },
   featureItem: {
     flexDirection: "row",
@@ -131,8 +121,8 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.sm,
   },
   buttonContainer: {
-    width: "100%",
-    gap: theme.spacing.md,
+    width: "80%",
+    gap: theme.spacing.xs,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
@@ -144,14 +134,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: theme.fontSize.lg,
     fontWeight: "600",
-  },
-  secondaryButton: {
-    paddingVertical: theme.spacing.sm,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: theme.fontSize.sm,
-    textDecorationLine: "underline",
   },
 });

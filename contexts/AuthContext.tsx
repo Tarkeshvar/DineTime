@@ -5,10 +5,11 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendEmailVerification,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
-import { User, RolePreference } from "../types";
+import { User } from "../types";
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -30,7 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("🔥 AuthContext: Setting up auth state listener");
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log(
@@ -42,7 +42,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (firebaseUser) {
         try {
-          console.log("📄 AuthContext: Fetching user data from Firestore...");
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
@@ -61,40 +60,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               updatedAt: data.updatedAt?.toDate(),
             } as User);
           } else {
-            console.log("❌ AuthContext: No user document found in Firestore");
             setUserData(null);
           }
         } catch (error) {
-          console.error("❌ AuthContext: Error fetching user data:", error);
           setUserData(null);
         }
       } else {
-        console.log("👤 AuthContext: No user logged in");
         setUserData(null);
       }
-
       setLoading(false);
-      console.log("✅ AuthContext: Auth loading complete");
     });
 
     return () => {
-      console.log("🔥 AuthContext: Cleaning up auth listener");
       unsubscribe();
     };
   }, []);
 
+  // 🔹 Sign In — block unverified users
   const signIn = async (email: string, password: string) => {
-    console.log("AuthContext: signIn called for", email);
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      console.log("AuthContext: signIn successful", result.user.uid);
-      // Don't set user manually - onAuthStateChanged will handle it
-    } catch (error) {
-      console.error("AuthContext: signIn error", error);
-      throw error;
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    if (!result.user.emailVerified) {
+      await signOut(auth);
+      throw new Error("Please verify your email before logging in.");
     }
   };
 
+  // 🔹 Sign Up — send email verification and create Firestore document
   const signUp = async (email: string, password: string) => {
     console.log("AuthContext: signUp called");
     try {

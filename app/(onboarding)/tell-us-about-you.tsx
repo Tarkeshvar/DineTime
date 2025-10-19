@@ -12,10 +12,12 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { getAuth } from "firebase/auth";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
 import { theme } from "../../constants/theme";
 import { RolePreference } from "../../types";
+
 
 export default function TellUsAboutYouScreen() {
   const router = useRouter();
@@ -44,20 +46,40 @@ export default function TellUsAboutYouScreen() {
 
     return true;
   };
+
   const handleContinue = async () => {
     if (!validateForm()) return;
 
-    setLoading(true);
-    try {
-      await updateUserProfile({
-        fullName: fullName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        rolePreference: selectedRole,
-      });
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    Alert.alert("Error", "No user found. Please sign in again.");
+    return;
+  }
+
+  // Refresh user state before checking verification
+  await currentUser.reload();
+
+  if (!currentUser.emailVerified) {
+    Alert.alert(
+      "Email Not Verified",
+      "Please verify your email before continuing."
+    );
+    return;
+  }
+
+  setLoading(true);
+  try {
+    await updateUserProfile({
+      fullName: fullName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      rolePreference: selectedRole,
+    });
 
       // Navigate based on role preference
-      if (selectedRole === "owner") {
-        // Owner selected → TODO: Navigate to restaurant registration
+      if (selectedRole === "owner" || selectedRole === "both") {
+        // TODO: Navigate to restaurant registration
         Alert.alert(
           "Success",
           "Profile created! Restaurant registration coming soon.",
@@ -69,7 +91,7 @@ export default function TellUsAboutYouScreen() {
           ]
         );
       } else {
-        // Consumer selected → Navigate to explore
+  
         router.replace("/(consumer)/explore");
       }
     } catch (error: any) {

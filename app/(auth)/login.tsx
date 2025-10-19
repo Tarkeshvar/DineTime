@@ -15,6 +15,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
 import { theme } from "../../constants/theme";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -25,9 +26,33 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // 🔹 Forgot password logic
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert("Missing Email", "Please enter your registered email first.");
+      return;
+    }
+
+    try {
+      const auth = getAuth();
+      await sendPasswordResetEmail(auth, email.trim());
+      Alert.alert(
+        "Password Reset Email Sent",
+        "Check your inbox for a password reset link."
+      );
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      if (error.code === "auth/user-not-found") {
+        Alert.alert("Error", "No account found with this email.");
+      } else if (error.code === "auth/invalid-email") {
+        Alert.alert("Error", "Please enter a valid email address.");
+      } else {
+        Alert.alert("Error", error.message);
+      }
+    }
+  };
+
   const handleEmailLogin = async () => {
-    console.log("🔐 Login attempt started");
-    console.log("📧 Email:", email);
 
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
@@ -36,17 +61,9 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      console.log("🔄 Calling signIn...");
       await signIn(email, password);
-      console.log("✅ SignIn successful");
 
-      // Don't navigate manually - let _layout.tsx handle it
-      // The auth state will update and trigger navigation
     } catch (error: any) {
-      console.error("❌ Login error:", error);
-      console.error("Error code:", error.code);
-      console.error("Error message:", error.message);
-
       let errorMessage = "Login failed. Please try again.";
 
       // Handle specific Firebase errors
@@ -61,8 +78,7 @@ export default function LoginScreen() {
       } else if (error.code === "auth/network-request-failed") {
         errorMessage = "Network error. Please check your connection.";
       }
-
-      Alert.alert("Login Failed", errorMessage);
+      Alert.alert("Login Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -146,7 +162,10 @@ export default function LoginScreen() {
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={handleForgotPassword}
+          >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
