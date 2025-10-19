@@ -53,6 +53,7 @@ export default function LoginScreen() {
   };
 
   const handleEmailLogin = async () => {
+
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
@@ -61,9 +62,22 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email, password);
-      // Navigation handled by index.tsx based on user state
+
     } catch (error: any) {
-      console.error("Login error:", error);
+      let errorMessage = "Login failed. Please try again.";
+
+      // Handle specific Firebase errors
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your connection.";
+      }
       Alert.alert("Login Failed", error.message);
     } finally {
       setLoading(false);
@@ -97,7 +111,7 @@ export default function LoginScreen() {
 
         {/* Form */}
         <View style={styles.form}>
-          {/* Email */}
+          {/* Email Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputWrapper}>
@@ -113,11 +127,13 @@ export default function LoginScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                editable={!loading}
               />
             </View>
           </View>
 
-          {/* Password */}
+          {/* Password Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputWrapper}>
@@ -133,6 +149,7 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                editable={!loading}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <MaterialIcons

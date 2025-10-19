@@ -31,8 +31,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("🔥 Auth state changed:", firebaseUser?.uid || "No user");
+      console.log(
+        "🔥 AuthContext: Auth state changed:",
+        firebaseUser?.uid || "No user"
+      );
 
       setUser(firebaseUser);
 
@@ -43,10 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
           if (userDoc.exists()) {
             const data = userDoc.data();
-            console.log("✅ User data loaded:", {
+            console.log("✅ AuthContext: User data loaded:", {
               fullName: data.fullName,
               phoneNumber: data.phoneNumber,
               rolePreference: data.rolePreference,
+              location: data.location,
             });
 
             setUserData({
@@ -63,7 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         setUserData(null);
       }
-
       setLoading(false);
     });
 
@@ -83,47 +87,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // 🔹 Sign Up — send email verification and create Firestore document
   const signUp = async (email: string, password: string) => {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
+    console.log("AuthContext: signUp called");
+    try {
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      console.log("AuthContext: signUp successful", result.user.uid);
 
-    // Send verification email
-    await sendEmailVerification(result.user);
+      // Create initial user document with minimal data
+      await setDoc(doc(db, "users", result.user.uid), {
+        uid: result.user.uid,
+        email: result.user.email,
+        phoneNumber: "",
+        fullName: "",
+        location: null,
+        coordinates: null,
+        savedAddresses: [],
+        rolePreference: "consumer" as RolePreference,
+        isAdmin: false,
+        ownedRestaurants: [],
+        bookingHistory: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
-    // Create Firestore user doc
-    await setDoc(doc(db, "users", result.user.uid), {
-      uid: result.user.uid,
-      email: result.user.email,
-      phoneNumber: null,
-      fullName: "",
-      rolePreference: "consumer",
-      isAdmin: false,
-      emailVerified: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      console.log("AuthContext: Initial user document created");
+    } catch (error) {
+      console.error("AuthContext: signUp error", error);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    console.log("AuthContext: logout called");
+    try {
+      await signOut(auth);
+      console.log("AuthContext: logout successful");
+    } catch (error) {
+      console.error("AuthContext: logout error", error);
+      throw error;
+    }
   };
 
   const updateUserProfile = async (data: Partial<User>) => {
-    if (!user) return;
+    if (!user) {
+      console.log("AuthContext: updateUserProfile - no user logged in");
+      return;
+    }
 
-    const updateData = {
-      ...data,
-      updatedAt: serverTimestamp(),
-    };
+    console.log("AuthContext: updateUserProfile called with data:", data);
 
-    await setDoc(doc(db, "users", user.uid), updateData, { merge: true });
-
-    setUserData((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
+    try {
+      const updateData = {
         ...data,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       };
-    });
+
+      await setDoc(doc(db, "users", user.uid), updateData, { merge: true });
+      console.log("AuthContext: User profile updated in Firestore");
+
+      // Update local state immediately
+      setUserData((prev) => {
+        if (!prev) return null;
+        const updated = {
+          ...prev,
+          ...data,
+          updatedAt: new Date(),
+        };
+        console.log("AuthContext: Local user data updated:", updated);
+        return updated;
+      });
+    } catch (error) {
+      console.error("AuthContext: updateUserProfile error", error);
+      throw error;
+    }
   };
 
   return (
