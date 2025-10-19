@@ -5,10 +5,11 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendEmailVerification,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
-import { User, RolePreference } from "../types";
+import { User } from "../types";
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -30,8 +31,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("🔥 Setting up auth state listener");
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("🔥 Auth state changed:", firebaseUser?.uid || "No user");
 
@@ -39,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (firebaseUser) {
         try {
-          console.log("📄 Fetching user data from Firestore...");
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
@@ -57,36 +55,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               updatedAt: data.updatedAt?.toDate(),
             } as User);
           } else {
-            console.log("❌ No user document found in Firestore");
             setUserData(null);
           }
         } catch (error) {
-          console.error("❌ Error fetching user data:", error);
           setUserData(null);
         }
       } else {
-        console.log("👤 No user logged in");
         setUserData(null);
       }
 
       setLoading(false);
-      console.log("✅ Auth loading complete");
     });
 
     return () => {
-      console.log("🔥 Cleaning up auth listener");
       unsubscribe();
     };
   }, []);
 
+  // 🔹 Sign In — block unverified users
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    if (!result.user.emailVerified) {
+      await signOut(auth);
+      throw new Error("Please verify your email before logging in.");
+    }
   };
 
+  // 🔹 Sign Up — send email verification and create Firestore document
   const signUp = async (email: string, password: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
 
-    // Create initial user document with minimal data (no city)
+    // Send verification email
+    await sendEmailVerification(result.user);
+
+    // Create Firestore user doc
     await setDoc(doc(db, "users", result.user.uid), {
       uid: result.user.uid,
       email: result.user.email,
@@ -94,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       fullName: "",
       rolePreference: "consumer",
       isAdmin: false,
+      emailVerified: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -113,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     await setDoc(doc(db, "users", user.uid), updateData, { merge: true });
 
-    // Update local state
     setUserData((prev) => {
       if (!prev) return null;
       return {
