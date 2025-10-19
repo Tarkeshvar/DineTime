@@ -1,131 +1,203 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
+import { Coordinates, SavedAddress } from "../types";
 
 interface LocationContextType {
   location: Location.LocationObject | null;
-  city: string | null;
+  userLocation: string | null;
+  coordinates: Coordinates | null;
   loading: boolean;
-  hasAskedPermission: boolean;
-  requestLocation: (type: "once" | "always") => Promise<void>;
-  skipLocation: () => Promise<void>;
+  savedAddresses: SavedAddress[];
+  currentAddress: SavedAddress | null;
+  requestLocation: () => Promise<void>;
+  setCurrentAddress: (address: SavedAddress) => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(
   undefined
 );
 
-const LOCATION_PERMISSION_KEY = "hasAskedLocationPermission";
-
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, userData } = useAuth();
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null
   );
-  const [city, setCity] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<string | null>(null);
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [loading, setLoading] = useState(false);
-  const [hasAskedPermission, setHasAskedPermission] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [currentAddress, setCurrentAddressState] =
+    useState<SavedAddress | null>(null);
 
-  // 🔹 Check AsyncStorage on mount
   useEffect(() => {
-    checkPermissionStatus();
-  }, []);
-
-  // 🔹 Reset permission if user logs in without city
-  useEffect(() => {
-    if (user && !(user as any).city) {
-      setHasAskedPermission(false);
-      AsyncStorage.removeItem(LOCATION_PERMISSION_KEY);
+    if (user && !userData?.location) {
+      setTimeout(() => {
+        requestLocation();
+      }, 500);
+    } else if (userData?.savedAddresses) {
+      setSavedAddresses(userData.savedAddresses);
+      const activeAddr = userData.savedAddresses.find((addr) => addr.isActive);
+      if (activeAddr) {
+        setCurrentAddressState(activeAddr);
+        setUserLocation(activeAddr.address);
+        setCoordinates(activeAddr.coordinates);
+      }
     }
-  }, [user]);
-
-  const checkPermissionStatus = async () => {
-    const asked = await AsyncStorage.getItem(LOCATION_PERMISSION_KEY);
-    setHasAskedPermission(asked === "true");
-  };
+  }, [user, userData]);
 
   const reverseGeocode = async (coords: {
     latitude: number;
     longitude: number;
   }) => {
     try {
-      const result = await Location.reverseGeocodeAsync(coords);
-      if (result && result.length > 0) {
-        const address = result[0];
-        const cityName =
-          address.city || address.subregion || address.region || "Unknown";
-        return cityName;
+      const addresses = await Location.reverseGeocodeAsync({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+
+      if (addresses.length > 0) {
+        const addr = addresses[0];
+
+        const address = [addr.street, addr.city, addr.region, addr.postalCode]
+          .filter(Boolean)
+          .join(", ");
+
+        return {
+          address:
+            address ||
+            `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`,
+          coordinates: coords,
+        };
       }
-      return null;
+
+      return {
+        address: `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(
+          4
+        )}`,
+        coordinates: coords,
+      };
     } catch (error) {
       console.error("Reverse geocoding error:", error);
-      return null;
+      return {
+        address: `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(
+          4
+        )}`,
+        coordinates: coords,
+      };
     }
   };
 
-  const requestLocation = async (type: "once" | "always") => {
+  const requestLocation = async () => {
     setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== "granted") {
         Alert.alert(
-          "Permission Denied",
-          "Location permission is required to show nearby restaurants."
+          "Location Required",
+          "Please enable location access to find restaurants near you.",
+          [{ text: "OK" }]
         );
-        await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, "true");
-        setHasAskedPermission(true);
         setLoading(false);
         return;
       }
 
       const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
       });
 
       setLocation(currentLocation);
 
-      const cityName = await reverseGeocode(currentLocation.coords);
-      setCity(cityName);
+      const coords: Coordinates = {
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      };
+      setCoordinates(coords);
 
-      if (user && cityName) {
-        await updateUserProfile({ city: cityName });
+      const { address } = await reverseGeocode(coords);
+
+      setUserLocation(address);
+
+      // Create new address
+      const newAddress: SavedAddress = {
+        id: Date.now().toString(),
+        label: "Current Location",
+        address,
+        coordinates: coords,
+        isActive: true,
+      };
+
+      // Keep max 2 addresses - remove oldest if exceeding
+      let updatedAddresses = [...savedAddresses];
+
+      // Deactivate all existing
+      updatedAddresses = updatedAddresses.map((addr) => ({
+        ...addr,
+        isActive: false,
+      }));
+
+      // Add new address
+      updatedAddresses.push(newAddress);
+
+      // Keep only last 2 addresses
+      if (updatedAddresses.length > 2) {
+        updatedAddresses = updatedAddresses.slice(-2);
       }
 
-      await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, "true");
-      setHasAskedPermission(true);
+      setSavedAddresses(updatedAddresses);
+      setCurrentAddressState(newAddress);
 
-      if (type === "once") {
-        console.log("📍 Location accessed once");
-      } else {
-        console.log("📍 Location permission granted (while using)");
+      if (user) {
+        await updateUserProfile({
+          location: address,
+          coordinates: coords,
+          savedAddresses: updatedAddresses,
+        });
       }
     } catch (error: any) {
-      console.error("Location error:", error);
+      console.error("❌ Location error:", error);
       Alert.alert("Error", "Failed to get your location. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const skipLocation = async () => {
-    await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, "true");
-    setHasAskedPermission(true);
+  const setCurrentAddress = (address: SavedAddress) => {
+    // Update active status
+    const updatedAddresses = savedAddresses.map((addr) => ({
+      ...addr,
+      isActive: addr.id === address.id,
+    }));
+
+    setSavedAddresses(updatedAddresses);
+    setCurrentAddressState(address);
+    setUserLocation(address.address);
+    setCoordinates(address.coordinates);
+
+    if (user) {
+      updateUserProfile({
+        location: address.address,
+        coordinates: address.coordinates,
+        savedAddresses: updatedAddresses,
+      });
+    }
   };
 
   return (
     <LocationContext.Provider
       value={{
         location,
-        city,
+        userLocation,
+        coordinates,
         loading,
-        hasAskedPermission,
+        savedAddresses,
+        currentAddress,
         requestLocation,
-        skipLocation,
+        setCurrentAddress,
       }}
     >
       {children}

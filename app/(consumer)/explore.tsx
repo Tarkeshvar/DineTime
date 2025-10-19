@@ -5,44 +5,152 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "expo-router";
 import { useLocation } from "../../contexts/LocationContext";
-import LocationPermissionModal from "../../components/common/LocationPermissionModal";
+import { restaurantService } from "../../services/restaurantService";
+import LocationFetchingModal from "../../components/common/LocationFetchingModal";
+import ExploreHeader from "../../components/consumer/ExploreHeader";
+import SearchBar from "../../components/restaurant/SearchBar";
+import CuisineFilter from "../../components/restaurant/CuisineFilter";
+import RestaurantCard from "../../components/restaurant/RestaurantCard";
+import { Restaurant } from "../../types";
 import { theme } from "../../constants/theme";
 
 export default function ExploreScreen() {
-  const { userData } = useAuth();
-  const { hasAskedPermission, requestLocation, skipLocation, loading, city } =
-    useLocation();
-  const [showLocationModal, setShowLocationModal] = useState(false);
+  const router = useRouter();
+  const { loading: locationLoading } = useLocation();
+
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
+  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
-    // Show location modal only if user hasn't been asked before
-    if (!hasAskedPermission && !userData?.city) {
-      // Small delay for better UX
-      const timer = setTimeout(() => {
-        setShowLocationModal(true);
-      }, 500);
-      return () => clearTimeout(timer);
+    loadRestaurants();
+  }, []);
+
+  useEffect(() => {
+    // Reload when cuisine filter changes
+    if (selectedCuisine) {
+      filterByCuisine(selectedCuisine);
+    } else {
+      loadRestaurants();
     }
-  }, [hasAskedPermission, userData]);
+  }, [selectedCuisine]);
 
-  const handleAllowWhileUsing = async () => {
-    await requestLocation("always");
-    setShowLocationModal(false);
+  const loadRestaurants = async (loadMore: boolean = false) => {
+    try {
+      if (!loadMore) {
+        setLoading(true);
+      }
+
+      const {
+        restaurants: newRestaurants,
+        lastDoc: newLastDoc,
+        hasMore: more,
+      } = await restaurantService.getRestaurants(
+        loadMore ? lastDoc : undefined
+      );
+
+      if (loadMore) {
+        setRestaurants((prev) => [...prev, ...newRestaurants]);
+      } else {
+        setRestaurants(newRestaurants);
+      }
+
+      setLastDoc(newLastDoc);
+      setHasMore(more);
+    } catch (error) {
+      console.error("Error loading restaurants:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const handleAllowOnce = async () => {
-    await requestLocation("once");
-    setShowLocationModal(false);
+  const filterByCuisine = async (cuisine: string) => {
+    try {
+      setLoading(true);
+      const filtered = await restaurantService.filterByCuisine(cuisine);
+      setRestaurants(filtered);
+      setHasMore(false);
+    } catch (error) {
+      console.error("Error filtering restaurants:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDontAllow = async () => {
-    await skipLocation();
-    setShowLocationModal(false);
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length > 2) {
+      try {
+        setLoading(true);
+        const results = await restaurantService.searchRestaurants(query);
+        setRestaurants(results);
+        setHasMore(false);
+      } catch (error) {
+        console.error("Error searching:", error);
+      } finally {
+        setLoading(false);
+      }
+    } else if (query.trim().length === 0) {
+      loadRestaurants();
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setSearchQuery("");
+    setSelectedCuisine(null);
+    setLastDoc(null);
+    loadRestaurants();
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore && !searchQuery && !selectedCuisine) {
+      loadRestaurants(true);
+    }
+  };
+
+  const handleRestaurantPress = (restaurant: Restaurant) => {
+    router.push(`/(consumer)/restaurant/${restaurant.id}`);
+  };
+  const renderRestaurant = ({ item }: { item: Restaurant }) => (
+    <RestaurantCard
+      restaurant={item}
+      onPress={() => handleRestaurantPress(item)}
+    />
+  );
+
+  const renderEmpty = () => {
+    if (loading) return null;
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>😕 No restaurants found</Text>
+        <Text style={styles.emptySubtext}>
+          {searchQuery
+            ? "Try a different search term"
+            : "Check back later for new restaurants"}
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loading || restaurants.length === 0) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={theme.colors.primary} />
+      </View>
+    );
   };
 
   return (
@@ -50,69 +158,56 @@ export default function ExploreScreen() {
       <StatusBar barStyle="dark-content" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hello, {userData?.fullName}! 👋</Text>
-          <View style={styles.locationRow}>
-            <MaterialIcons
-              name="location-on"
-              size={16}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.locationText}>
-              {city || userData?.city || "Location not set"}
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <MaterialIcons
-            name="notifications-none"
-            size={24}
-            color={theme.colors.text}
-          />
-        </TouchableOpacity>
-      </View>
+      <ExploreHeader />
 
-      {/* Content */}
-      <View style={styles.content}>
-        <Text style={styles.comingSoon}>🍽️ Explore Screen - Coming Soon!</Text>
-
-        {/* Show location info if available */}
-        {city && (
-          <View style={styles.infoCard}>
-            <MaterialIcons
-              name="check-circle"
-              size={24}
-              color={theme.colors.success}
-            />
-            <Text style={styles.infoText}>Location enabled: {city}</Text>
-          </View>
-        )}
-
-        {/* Manual location trigger (for testing) */}
-        {!city && hasAskedPermission && (
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => setShowLocationModal(true)}
-          >
-            <MaterialIcons
-              name="location-on"
-              size={20}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.retryButtonText}>Enable Location</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Location Permission Modal */}
-      <LocationPermissionModal
-        visible={showLocationModal}
-        loading={loading}
-        onAllowWhileUsing={handleAllowWhileUsing}
-        onAllowOnce={handleAllowOnce}
-        onDontAllow={handleDontAllow}
+      {/* Search Bar */}
+      <SearchBar
+        value={searchQuery}
+        onChangeText={handleSearch}
+        onFilterPress={() => {
+          // TODO: Open filter modal
+          console.log("Filter pressed");
+        }}
       />
+
+      {/* Cuisine Filter */}
+      <CuisineFilter
+        cuisines={[]}
+        selectedCuisine={selectedCuisine}
+        onSelectCuisine={setSelectedCuisine}
+      />
+
+      {/* Restaurant List */}
+      <FlatList
+        data={restaurants}
+        renderItem={renderRestaurant}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+      />
+
+      {/* Location Fetching Modal */}
+      <LocationFetchingModal visible={locationLoading} />
+
+      {/* Initial Loading */}
+      {loading && restaurants.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading restaurants...</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -122,76 +217,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+  listContent: {
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.xl,
   },
-  greeting: {
-    fontSize: theme.fontSize.lg,
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.xxl * 2,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  emptyText: {
+    fontSize: theme.fontSize.xl,
     fontWeight: "bold",
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  locationText: {
-    fontSize: theme.fontSize.sm,
+  emptySubtext: {
+    fontSize: theme.fontSize.md,
     color: theme.colors.textSecondary,
+    textAlign: "center",
   },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
+  footerLoader: {
+    paddingVertical: theme.spacing.lg,
+    alignItems: "center",
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     justifyContent: "center",
     alignItems: "center",
+    gap: theme.spacing.md,
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.lg,
-  },
-  comingSoon: {
-    fontSize: theme.fontSize.xl,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: `${theme.colors.success}15`,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  infoText: {
+  loadingText: {
     fontSize: theme.fontSize.md,
-    color: theme.colors.text,
-    flex: 1,
-  },
-  retryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: `${theme.colors.primary}15`,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  retryButtonText: {
-    fontSize: theme.fontSize.md,
-    fontWeight: "600",
-    color: theme.colors.primary,
+    color: theme.colors.textSecondary,
   },
 });

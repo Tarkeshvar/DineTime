@@ -1,45 +1,48 @@
 import { useEffect } from "react";
-import { useRouter, useSegments } from "expo-router";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { useAuth } from "../contexts/AuthContext";
-import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { theme } from "../constants/theme";
 
 export default function Index() {
   const router = useRouter();
-  const segments = useSegments();
   const { user, userData, loading } = useAuth();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) {
+      console.log("⏳ Index: Auth loading...");
+      return;
+    }
 
-    const inAuthGroup = segments[0] === "(auth)";
-    const inOnboardingGroup = segments[0] === "(onboarding)";
-
-    console.log("Navigation check:", {
-      user: user?.uid,
-      userData: userData?.fullName,
-      currentSegment: segments[0],
-      loading,
+    console.log("🎯 Index: Determining initial route...", {
+      hasUser: !!user,
+      hasUserData: !!userData,
+      fullName: userData?.fullName,
+      phoneNumber: userData?.phoneNumber,
+      isAdmin: userData?.isAdmin,
     });
 
-    if (!user) {
-      // Not logged in → go to auth
-      if (!inAuthGroup) {
+    // Small delay to ensure auth state is settled
+    const timer = setTimeout(() => {
+      if (!user) {
+        console.log("➡️ Index: No user, going to landing");
         router.replace("/(auth)/landing");
-      }
-    } else if (!userData?.fullName || !userData?.phoneNumber) {
-      // Logged in but incomplete profile → go to onboarding
-      if (!inOnboardingGroup) {
+      } else if (!userData?.fullName || !userData?.phoneNumber) {
+        console.log(
+          "➡️ Index: User exists but incomplete profile, going to onboarding"
+        );
         router.replace("/(onboarding)/tell-us-about-you");
+      } else if (userData.isAdmin) {
+        console.log("➡️ Index: Admin user, going to dashboard");
+        router.replace("/(admin)/dashboard");
+      } else {
+        console.log("➡️ Index: Regular user, going to explore");
+        router.replace("/(consumer)/explore");
       }
-    } else if (userData?.isAdmin) {
-      // Admin user → go to admin dashboard
-      router.replace("/(admin)/dashboard");
-    } else {
-      // Regular user → go to explore
-      router.replace("/(consumer)/explore");
-    }
-  }, [user, userData, loading, segments]);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [user, userData, loading]);
 
   return (
     <View style={styles.container}>

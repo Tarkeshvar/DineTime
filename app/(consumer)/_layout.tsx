@@ -1,47 +1,49 @@
-import { Tabs } from "expo-router";
-import { MaterialIcons } from "@expo/vector-icons";
-import { theme } from "../../constants/theme";
+import React from "react";
+import { Stack } from "expo-router";
 
 export default function ConsumerLayout() {
   return (
-    <Tabs
+    <Stack
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-        },
+        animation: "fade",
       }}
     >
-      <Tabs.Screen
-        name="explore"
+      <Stack.Screen name="explore" />
+      <Stack.Screen name="bookings" />
+      <Stack.Screen
+        name="restaurant/[id]"
         options={{
-          title: "Explore",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="explore" size={size} color={color} />
-          ),
+          animation: "slide_from_right",
         }}
       />
-      <Tabs.Screen
-        name="bookings"
+      <Stack.Screen
+        name="booking/[id]"
         options={{
-          title: "Bookings",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="event" size={size} color={color} />
-          ),
+          animation: "slide_from_bottom",
+          presentation: "modal",
         }}
       />
-      <Tabs.Screen
-        name="profile"
+      <Stack.Screen
+        name="payment"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="person" size={size} color={color} />
-          ),
+          animation: "slide_from_right",
         }}
       />
-    </Tabs>
+      <Stack.Screen
+        name="profile-menu"
+        options={{
+          presentation: "transparentModal",
+          animation: "none",
+        }}
+      />
+      <Stack.Screen
+        name="location-selector"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+        }}
+      />
+    </Stack>
   );
 }

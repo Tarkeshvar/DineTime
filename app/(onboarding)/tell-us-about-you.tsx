@@ -44,7 +44,6 @@ export default function TellUsAboutYouScreen() {
 
     return true;
   };
-
   const handleContinue = async () => {
     if (!validateForm()) return;
 
@@ -57,8 +56,8 @@ export default function TellUsAboutYouScreen() {
       });
 
       // Navigate based on role preference
-      if (selectedRole === "owner" || selectedRole === "both") {
-        // TODO: Navigate to restaurant registration
+      if (selectedRole === "owner") {
+        // Owner selected → TODO: Navigate to restaurant registration
         Alert.alert(
           "Success",
           "Profile created! Restaurant registration coming soon.",
@@ -70,7 +69,7 @@ export default function TellUsAboutYouScreen() {
           ]
         );
       } else {
-        // Navigate to consumer home (location popup will show there)
+        // Consumer selected → Navigate to explore
         router.replace("/(consumer)/explore");
       }
     } catch (error: any) {
@@ -247,48 +246,6 @@ export default function TellUsAboutYouScreen() {
                   Register and manage your restaurant
                 </Text>
                 {selectedRole === "owner" && (
-                  <View style={styles.checkIcon}>
-                    <MaterialIcons
-                      name="check-circle"
-                      size={24}
-                      color={theme.colors.primary}
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              {/* Both Option */}
-              <TouchableOpacity
-                style={[
-                  styles.roleCard,
-                  selectedRole === "both" && styles.roleCardSelected,
-                ]}
-                onPress={() => setSelectedRole("both")}
-                activeOpacity={0.7}
-              >
-                <View style={styles.roleIconContainer}>
-                  <MaterialIcons
-                    name="people"
-                    size={32}
-                    color={
-                      selectedRole === "both"
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary
-                    }
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.roleTitle,
-                    selectedRole === "both" && styles.roleTitleSelected,
-                  ]}
-                >
-                  Both
-                </Text>
-                <Text style={styles.roleDescription}>
-                  Book tables and manage restaurants
-                </Text>
-                {selectedRole === "both" && (
                   <View style={styles.checkIcon}>
                     <MaterialIcons
                       name="check-circle"
