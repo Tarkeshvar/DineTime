@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   FlatList,
   TouchableOpacity,
@@ -13,6 +12,7 @@ import {
   TextInput,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";

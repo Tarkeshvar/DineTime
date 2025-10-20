@@ -6,12 +6,12 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Dimensions,
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";

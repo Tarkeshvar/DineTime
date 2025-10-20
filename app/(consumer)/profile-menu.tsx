@@ -8,7 +8,7 @@ import {
   Animated,
   Dimensions,
   Alert,
-  Image, // Added Image import
+  Image, 
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -58,8 +58,6 @@ export default function ProfileMenu() {
       if (callback) {
         callback();
       } else {
-        // ✅ FIX APPLIED HERE: Prevents "The action 'GO_BACK' was not handled" error
-        // by navigating to a known safe route (consumer explore screen) instead of going back.
         router.replace("/(consumer)/explore");
       }
     });
