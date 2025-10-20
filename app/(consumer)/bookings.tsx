@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";

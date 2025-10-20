@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   FlatList,
   TouchableOpacity,
@@ -20,6 +19,7 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";

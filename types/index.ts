@@ -57,8 +57,8 @@ export interface Address {
 }
 
 export interface OperatingHours {
-  open: string; // Format: "09:00"
-  close: string; // Format: "22:00"
+  open: string; 
+  close: string; 
   closed: boolean;
 }
 
@@ -160,10 +160,10 @@ export interface Payment {
   totalGuests: number;
   currency: string;
   // Payment Gateway IDs (using Razorpay or Stripe)
-  paymentIntentId?: string; // Stripe
-  razorpayOrderId?: string; // Razorpay
-  razorpayPaymentId?: string; // Razorpay
-  razorpaySignature?: string; // Razorpay
+  paymentIntentId?: string; 
+  razorpayOrderId?: string; 
+  razorpayPaymentId?: string; 
+  razorpaySignature?: string; 
   status: PaymentStatus;
   paidAt?: Date;
   method?: PaymentMethod;
@@ -181,10 +181,10 @@ export interface Booking {
   userEmail: string;
 
   // Booking Details
-  date: Date; // Booking date
-  timeSlot: string; // e.g., "19:00 - 21:00"
+  date: Date; 
+  timeSlot: string; 
   numberOfGuests: number;
-  tableIds: string[]; // Assigned table IDs
+  tableIds: string[]; 
 
   // Status
   status: BookingStatus;
@@ -194,7 +194,7 @@ export interface Booking {
 
   // Special Requests
   specialRequests?: string;
-  occasion?: string; // e.g., "Birthday", "Anniversary"
+  occasion?: string; 
 
   // Timestamps
   createdAt: Date;
@@ -207,7 +207,7 @@ export interface Booking {
   cancelledBy?: CancelledBy;
 
   // Non-refundable flag (always true for this app)
-  isNonRefundable: boolean; // Always true
+  isNonRefundable: boolean; 
 }
 
 // ==================== REVIEW TYPES (Optional - for future) ====================
@@ -218,7 +218,7 @@ export interface Review {
   userId: string;
   userName: string;
   bookingId: string;
-  rating: number; // 1-5
+  rating: number; 
   review: string;
   images?: string[];
   createdAt: Date;
