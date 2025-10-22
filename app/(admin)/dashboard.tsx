@@ -256,7 +256,6 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
@@ -269,8 +268,13 @@ export default function AdminDashboard() {
           />
         }
       >
+        {/* Revenue Section - Click to view detailed analytics */}
         <View style={styles.revenueSection}>
-          <View style={styles.revenueCard}>
+          <TouchableOpacity
+            style={styles.revenueCard}
+            onPress={() => router.push("/(admin)/revenue-analytics")}
+            activeOpacity={0.8}
+          >
             <View style={styles.revenueTop}>
               <View>
                 <Text style={styles.revenueLabel}>Total Revenue</Text>
@@ -292,13 +296,21 @@ export default function AdminDashboard() {
                 <MaterialIcons name="today" size={16} color="#64748B" />
                 <Text style={styles.todayLabel}>Today</Text>
               </View>
-              <Text style={styles.todayValue}>
-                {formatCurrency(stats.todayRevenue)}
-              </Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Text style={styles.todayValue}>
+                  {formatCurrency(stats.todayRevenue)}
+                </Text>
+                <MaterialIcons
+                  name="arrow-forward-ios"
+                  size={16}
+                  color="#94A3B8"
+                />
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Overview</Text>
           <View style={styles.statsGrid}>
@@ -331,7 +343,6 @@ export default function AdminDashboard() {
             />
           </View>
         </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Bookings</Text>
           <View style={styles.infoRow}>
@@ -349,7 +360,6 @@ export default function AdminDashboard() {
             />
           </View>
         </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
 
@@ -377,7 +387,6 @@ export default function AdminDashboard() {
             onPress={() => router.push("/(admin)/manage-restaurants")}
           />
         </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -424,7 +433,6 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginBottom: 2,
     fontWeight: "500",
-    marginTop: 20,
   },
   headerTitle: {
     fontSize: 24,
@@ -438,7 +446,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEE2E2",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 20,
   },
   content: {
     flex: 1,

@@ -25,12 +25,22 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="revenue-analytics"
+        options={{
+          title: "Revenue",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="analytics" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="pending-approvals"
         options={{
           title: "Approvals",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="pending-actions" size={size} color={color} />
           ),
+          tabBarBadge: undefined, // Can add badge count for pending items
         }}
       />
       <Tabs.Screen

@@ -1,22 +1,26 @@
-import { Tabs } from "expo-router";
+import React from "react";
+import { Tabs, useSegments } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../constants/theme";
 
 export default function OwnerLayout() {
+  // Detect the current route path segments
+  const segments = useSegments();
+  const isRegisterFlow = segments.includes("register-restaurant");
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-          backgroundColor: theme.colors.background,
-          height: 60,
-          paddingBottom: 6,
-          paddingTop: 6,
-        },
+        tabBarStyle: isRegisterFlow
+          ? { display: "none" } // Hide tab bar during registration steps
+          : {
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.border,
+              backgroundColor: theme.colors.background,
+            },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
@@ -32,6 +36,7 @@ export default function OwnerLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="manage-bookings"
         options={{
@@ -41,6 +46,7 @@ export default function OwnerLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="analytics"
         options={{
@@ -50,6 +56,7 @@ export default function OwnerLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -59,10 +66,12 @@ export default function OwnerLayout() {
           ),
         }}
       />
+
+      {/* Hidden from tab bar navigation */}
       <Tabs.Screen
         name="register-restaurant"
         options={{
-          href: null, // hide from bottom tabs
+          href: null,
         }}
       />
     </Tabs>

@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   collection,
   getDocs,
@@ -19,7 +20,6 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../config/firebase";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Restaurant } from "../../types";
@@ -90,6 +90,33 @@ export default function ManageRestaurantsScreen() {
             } catch (error) {
               console.error("Error suspending restaurant:", error);
               Alert.alert("Error", "Failed to suspend restaurant");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleUnsuspend = async (restaurant: Restaurant) => {
+    Alert.alert(
+      "Unsuspend Restaurant",
+      `Are you sure you want to unsuspend "${restaurant.name}"? It will be visible to users again.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Unsuspend",
+          style: "default",
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, "restaurants", restaurant.id), {
+                status: "approved",
+                updatedAt: new Date(),
+              });
+              Alert.alert("Success", "Restaurant unsuspended and approved");
+              loadRestaurants();
+            } catch (error) {
+              console.error("Error unsuspending restaurant:", error);
+              Alert.alert("Error", "Failed to unsuspend restaurant");
             }
           },
         },
@@ -213,14 +240,25 @@ export default function ManageRestaurantsScreen() {
           <View style={styles.divider} />
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.suspendButton}
-              onPress={() => handleSuspend(item)}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons name="block" size={20} color="#F59E0B" />
-              <Text style={styles.suspendText}>Suspend</Text>
-            </TouchableOpacity>
+            {item.status === "suspended" ? (
+              <TouchableOpacity
+                style={styles.unsuspendButton}
+                onPress={() => handleUnsuspend(item)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="check-circle" size={20} color="#10B981" />
+                <Text style={styles.unsuspendText}>Unsuspend</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.suspendButton}
+                onPress={() => handleSuspend(item)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="block" size={20} color="#F59E0B" />
+                <Text style={styles.suspendText}>Suspend</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.deleteButton}
@@ -433,7 +471,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#0F172A",
     marginBottom: 4,
-    marginTop: 20,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -585,6 +622,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#F59E0B",
+  },
+  unsuspendButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#D1FAE5",
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  unsuspendText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#10B981",
   },
   deleteButton: {
     flex: 1,

@@ -130,8 +130,6 @@ const styles = StyleSheet.create({
     // Kept standard horizontal padding
     paddingHorizontal: 10,
     paddingVertical: theme.spacing.md,
-
-    marginTop: 30,
   },
   locationButton: {
     flexDirection: "row",
